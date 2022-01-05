@@ -1,0 +1,91 @@
+"","name","chemical.name","class","massall"
+"1","Cholesterol","","Cholesterol and Total Glycerides ",386.3549
+"2","Total Glycerides (as triolein)","","Cholesterol and Total Glycerides ",884.783291
+"3","C12:0","Dodecanoic Acid (Lauric Acid)","Fatty Acids ",400.3553
+"4","C16:0","Hexadecanoic Acid (Palmitic Acid)","Fatty Acids ",512.4805
+"5","C16:1 n-7","(Z)-9-Hexadecenoic Acid (Palmitoleic Acid)","Fatty Acids ",508.4492
+"6","C18:0","Octadecanoic Acid (Stearic Acid)","Fatty Acids ",568.5431
+"7","C18:3 n-3","(Z,Z,Z)-9,12,15-Octadecatrienoic Acid (_-Linolenic Acid)","Fatty Acids ",278.22458
+"8","C18:1 n-9","(Z)-9-Octadecenoic Acid (Oleic Acid)","Fatty Acids ",564.5118
+"9","C18:2 n-6","(Z,Z)-9,12-Octadecadienoic Acid (Linoleic Acid)","Fatty Acids ",560.4805
+"10","C22:0","Docosanoic Acid (Behenic Acid)","Fatty Acids ",680.6683
+"11","Alanine","","Amino Acids ",89.0477
+"12","Glycine","","Amino Acids ",75.032
+"13","Histidine","","Amino Acids ",155.0695
+"14","Isoleucine","","Amino Acids ",131.0946
+"15","Leucine","","Amino Acids ",131.0946
+"16","Lysine","","Amino Acids ",146.1055
+"17","Methionine","","Amino Acids ",149.051
+"18","Proline","","Amino Acids ",115.0633
+"19","Serine","","Amino Acids ",105.0426
+"20","Threonine","","Amino Acids ",119.0582
+"21","Tyrosine","","Amino Acids ",181.0739
+"22","Valine","","Amino Acids ",117.079
+"23","Retinol","","Vitamins and Carotenoids ",286.2297
+"24","_-Tocopherol","","Vitamins and Carotenoids ",430.381081
+"25","_- + _-Tocopherol","","Vitamins and Carotenoids ",430.381081
+"26","Lutein","","Vitamins and Carotenoids ",568.428
+"27","Zeaxanthin","","Vitamins and Carotenoids ",568.428
+"28","_-Cryptoxanthin","","Vitamins and Carotenoids ",552.433116
+"29","Total _-Carotene","","Vitamins and Carotenoids ",536.438202
+"30","Total _-Carotene","","Vitamins and Carotenoids ",536.438202
+"31","25-Hydroxyvitamin D3","","Vitamins and Carotenoids ",400.3341
+"32","5-Methyltetrahydrofolate","","Vitamins and Carotenoids ",458.1788
+"33","Pyridoxal 5'-phosphate","","Vitamins and Carotenoids ",247.0246
+"34","Creatinine","","Clinical Markers",113.0589
+"35","Glucose","","Clinical Markers",180.0634
+"36","Urea","","Clinical Markers",60.0324
+"37","Uric Acid","","Clinical Markers",168.0283
+"38","Homocysteine","","Clinical Markers",135.0354
+"39","Cortisol","","Clinical Markers",362.2093
+"40","Progesterone","","Clinical Markers",314.2246
+"41","Testosterone","","Clinical Markers",288.2089
+"42","Calcium","","Electrolytes ",41.9782
+"43","Magnesium","","Electrolytes ",26.0007
+"44","Potassium","","Electrolytes ",38.9637
+"45","Sodium","","Electrolytes ",22.9898
+"46","C14:0","Tetradecanoic Acid (Myristic Acid)","Fatty Acids ",456.4179
+"47","C14:1","(Z)-9-Tetradecenoic Acid (Myristoleic Acid)","Fatty Acids ",452.3866
+"48","C15:0","Pentadecanoic Acid","Fatty Acids ",242.2246
+"49","C17:0","Heptadecanoic Acid (Margaric Acid)","Fatty Acids ",540.5118
+"50","C18:3 n-6","(Z,Z,Z)-6,9,12-Octadecatrienoic Acid (_-Linolenic Acid)","Fatty Acids ",278.22458
+"51","C18:1 n-7","(Z)-11-Octadecenoic Acid (Vaccenic Acid)","Fatty Acids ",564.5118
+"52","C20:0","Eicosanoic Acid (Arachidic Acid)","Fatty Acids ",624.6057
+"53","C20:1","(Z)-11-Eicosenoic Acid (Gondolic Acid)","Fatty Acids ",304.24023
+"54","C20:2","(Z,Z)-11,14-Eicosadienoic Acid","Fatty Acids ",308.2715
+"55","C20:3 n-6","(Z,Z,Z)-8,11,14-Eicosatrienoic Acid (Homo-_-Linolenic Acid)","Fatty Acids ",304.24023
+"56","C20:4 n-6","(Z,Z,Z,Z)-5,8,11,14-Eicosatetraenoic Acid (Arachidonic Acid)","Fatty Acids ",608.4805
+"57","C20:5 n-3","(Z,Z,Z,Z,Z)-5,8,11,14,17-Eicosapentaenoic Acid (EPA)","Fatty Acids ",304.24023
+"58","C22:1","(Z)-13-Docosenoic Acid (Erucic Acid)","Fatty Acids ",676.637
+"59","C22:4 n-6","(Z,Z,Z,Z)-7,10,13,16-Docosatetraenoic Acid","Fatty Acids ",332.2715
+"60","C22:5 n-3","(Z,Z,Z,Z,Z)-7,10,13,16,19-Docosapentaenoic Acid (DPA))","Fatty Acids ",330.25588
+"61","C22:5 n-6","(Z,Z,Z,Z,Z)-4,7,10,13,16-Docosapentaenoic Acid","Fatty Acids ",330.2559
+"62","C22:6 n-3","(Z,Z,Z,Z,Z,Z)-4,7,10,13,16,19-Docosahexaenoic Acid (DHA)","Fatty Acids ",330.25588
+"63","C24:0","Tetracosanoic Acid (Lignoceric Acid)","Fatty Acids ",736.7309
+"64","C24:1","(Z)-15-Tetracosenoic Acid (Nervonic Acid)","Fatty Acids ",732.6996
+"65","Arginine","","Amino Acids ",174.1117
+"66","Cysteine","","Amino Acids ",121.0197
+"67","Cystine","","Amino Acids ",240.0238
+"68","Phenylalanine","","Amino Acids ",165.079
+"69","Trans-Lycopene","","Vitamins and Carotenoids ",536.4382
+"70","Total Lycopene","","Vitamins and Carotenoids ",536.438202
+"71","Trans-_-Carotene","","Vitamins and Carotenoids ",536.438202
+"72","Cis-_-Carotene","","Vitamins and Carotenoids ",536.438202
+"73","25-Hydroxyvitamin D2","","Vitamins and Carotenoids ",412.3341
+"74","Folic acid","","Vitamins and Carotenoids ",441.1397
+"75","Copper","","Trace Elements ",62.9296
+"76","Selenium","","Trace Elements ",81.9322
+"77","Zinc","","Trace Elements ",63.9291
+"78","Selenoprotein P","","Selenium Species ",NA
+"79","Glutathione Peroxidase","","Selenium Species ",NA
+"80","Seleno-Albumin","","Selenium Species ",NA
+"81","Total Protein ","","Total Protein ",NA
+"82","Bilirubin ","","Bilirubin ",584.2635
+"83","Perfluorooctanoic Acid (PFOA)","","PFCs ",413.973702
+"84","Perfluorononanoic Acid (PFNA)","","PFCs ",463.9705
+"85","Perfluorodecanoic Acid (PFDA)","","PFCs ",513.967314
+"86","Perfluoroundecanoic Acid (PFUnA)","","PFCs ",563.964121
+"87","Perfluorohexansulfonate (PFHxS)","","PFCs ",398.936056
+"88","Perfluorooctanesulfonic Acid (PFOS)","","PFCs ",499.937494
+"89","Total folate","","Additional Vitamers ",NA
+"90","4-Pyridoxic acid","","Additional Vitamers ",183.0532

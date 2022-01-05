@@ -1,0 +1,1091 @@
+---
+title: "PMDDA Workflow"
+author: "Miao Yu"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    df_print: paged
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache = T,message=F,warning=F)
+library(rmwf)
+sessionInfo()
+```
+
+This document is the reproducible code for PMDDA paper with extra comparison with other workflow. To access standalone PMDDA workflow, please install `rmwf` package from [GitHub](https://github.com/yufree/rmwf) and use `rmarkdown::draft("test.Rmd", template = "PMDDA", package = "rmwf")` to create a reproducible workflow document for your own studies. Such workflow is also available through [xcmsrocker](https://hub.docker.com/r/yufree/xcmsrocker/) project.
+
+# MS1 data collection
+
+The MS1 full scan data used in this study could be accessed from figshare and the details are given as comments in this chunk. Those data include five NIST1950 samples and five matrix samples from positive and negative mode, respectively. Those data are also available on GitHub.
+
+```{r download,eval=FALSE}
+options(timeout=600)
+# Download data using rfigshare package
+library(rfigshare)
+# create data folder for MS1 positive data
+dir.create(file.path('data'), showWarnings = FALSE)
+setwd(file.path('data'))
+
+# download NIST1950 MS1 positive data into nist1950 folder
+dir.create(file.path('nist1950'), showWarnings = FALSE)
+setwd(file.path('nist1950'))
+article_id <- 13252196
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+
+# download matrix MS1 positive data into matrix folder
+setwd('..')
+dir.create(file.path('matrix'), showWarnings = FALSE)
+setwd(file.path('matrix'))
+article_id <- 13252244
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+setwd('..')
+path <- getwd()
+# get the files name of positive MS1 data
+files <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+
+# create datan folder for MS1 negative data
+dir.create(file.path('datan'), showWarnings = FALSE)
+setwd(file.path('datan'))
+
+# download NIST1950 MS1 negative data into nist1950n folder
+dir.create(file.path('nist1950n'), showWarnings = FALSE)
+setwd(file.path('nist1950n'))
+article_id <- 13252274
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+setwd('..')
+
+# download matrix MS1 negative data into matrixn folder
+dir.create(file.path('matrixn'), showWarnings = FALSE)
+setwd(file.path('matrixn'))
+article_id <- 13252355
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+setwd('..')
+path <- getwd()
+filesn <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+```
+
+# Optimization of XCMS
+
+This chunk should run first to generate XCMS parameters. We suggest a computer with large memory to run this chunk for IPO package.
+
+## IPO
+
+This chunk will generate 'para.RData'(positive) and 'paran.RData' (negative) to save the optimized parameters for xcms peak picking.
+
+```{r IPOpos,eval=FALSE}
+path <- 'data/nist1950'
+files <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+library(IPO)
+library(xcms)
+peakpickingParameters <- getDefaultXcmsSetStartingParams('centWave')
+# Uncomment this line to use your own data(suggested 3-5 pooled QC samples)
+# path <- 'path/to/your/files'
+# change to 5 for obitrap
+peakpickingParameters$ppm <- 10
+resultPeakpicking <- 
+  optimizeXcmsSet(files = files[c(1,3,5)], 
+                  params = peakpickingParameters,
+                  plot = F,
+                  subdir = NULL)
+
+optimizedXcmsSetObject <- resultPeakpicking$best_settings$xset
+retcorGroupParameters <- getDefaultRetGroupStartingParams()
+retcorGroupParameters$minfrac <- 1
+resultRetcorGroup <-
+  optimizeRetGroup(xset = optimizedXcmsSetObject, 
+                   params = retcorGroupParameters, 
+                   plot = F,
+                   subdir = NULL)
+para <- c(resultPeakpicking$best_settings$parameters, 
+          resultRetcorGroup$best_settings)
+save(para,file = 'para.RData')
+
+path <- 'datan/nist1950n'
+files <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+library(IPO)
+library(xcms)
+peakpickingParameters <- getDefaultXcmsSetStartingParams('centWave')
+# Uncomment this line to use your own data(suggested 3-5 pooled QC samples)
+# path <- 'path/to/your/files'
+# change to 5 for obitrap
+peakpickingParameters$ppm <- 10
+resultPeakpicking <- 
+  optimizeXcmsSet(files = files[c(1,3,5)], 
+                  params = peakpickingParameters,
+                  plot = F,
+                  subdir = NULL)
+
+optimizedXcmsSetObject <- resultPeakpicking$best_settings$xset
+retcorGroupParameters <- getDefaultRetGroupStartingParams()
+retcorGroupParameters$minfrac <- 1
+resultRetcorGroup <-
+  optimizeRetGroup(xset = optimizedXcmsSetObject, 
+                   params = retcorGroupParameters, 
+                   plot = F,
+                   subdir = NULL)
+para <- c(resultPeakpicking$best_settings$parameters, 
+          resultRetcorGroup$best_settings)
+save(para,file = 'paran.RData')
+```
+
+## Wrap function for peak picking
+
+This chunk could be run after you have optimized IPO parameters from last chunk to load the parameters as function.
+
+```{r eval = FALSE}
+library(xcms)
+# here we use pre-optimized IPO parameters
+# Or you could load your own set from last chunk
+# Positive mode
+load('para.RData')
+getrtmz <- function(path,index = NULL){
+  files <- list.files(path,pattern = ".CDF|.mzXML|.mzML",full.names = T,recursive = T)
+  if(!is.null(index)){
+    files<- files[index]
+    }
+  group <- xcms:::phenoDataFromPaths(files)
+  if(NCOL(group)==1){
+      sample_group <- group$class
+  }else{
+      cols <- colnames(group)
+      sample_group <-  do.call(paste,c(group[cols],sep='_'))
+  }
+  sample_name=sub(basename(files),pattern = ".CDF|.mzXML|.mzML",replacement = '')
+  pd <- cbind.data.frame(sample_name, sample_group)
+  
+  raw_data <- readMSData(files = files, pdata = new("NAnnotatedDataFrame", pd),
+                       mode = "onDisk")
+  # remove co-elution and column wash phase
+  # filter_data <- filterRt(raw_data,rt = c(100,900))
+  cwp <- CentWaveParam(peakwidth = c(para$min_peakwidth,para$max_peakwidth), 
+                       ppm             = para$ppm,
+                       noise           = para$noise,
+                       snthresh        = para$snthresh,
+                       mzdiff          = para$mzdiff,
+                       prefilter       = c(para$prefilter,para$value_of_prefilter),
+                       mzCenterFun     = para$mzCenterFun,
+                       integrate       = para$integrate,
+                       fitgauss        = para$fitgauss,
+                       verboseColumns  = para$verbose.columns)
+  owp <- ObiwarpParam(binSize        = para$profStep,
+                      centerSample   = 6,
+                      response       = para$response,
+                      distFun        = para$distFunc,
+                      gapInit        = para$gapInit,
+                      gapExtend      = para$gapExtend,
+                      factorDiag     = para$factorDiag,
+                      factorGap      = para$factorGap,
+                      localAlignment = ifelse(para$localAlignment==0,F,T))
+  pdp <- PeakDensityParam(sampleGroups = pd$sample_group,
+                        bw      = para$bw,
+                        minFraction = para$minfrac,
+                        minSamples = para$minsamp,
+                        maxFeatures = para$max,
+                        binSize = para$mzwid)
+
+  xdata <- findChromPeaks(raw_data, param = cwp)
+  # xdata <- findChromPeaks(filter_data, param = cwp)
+  xdata <- adjustRtime(xdata, param = owp)
+  xdata <- groupChromPeaks(xdata, param = pdp)
+  xdata <- fillChromPeaks(xdata)
+  return(xdata)
+}
+# Negative mode
+load('paran.RData')
+getrtmzn <- function(path,index = NULL){
+  files <- list.files(path,pattern = ".CDF|.mzXML|.mzML",full.names = T,recursive = T)
+  if(!is.null(index)){
+    files<- files[index]
+    }
+  group <- xcms:::phenoDataFromPaths(files)
+  if(NCOL(group)==1){
+      sample_group <- group$class
+  }else{
+      cols <- colnames(group)
+      sample_group <-  do.call(paste,c(group[cols],sep='_'))
+  }
+  sample_name=sub(basename(files),pattern = ".CDF|.mzXML|.mzML",replacement = '')
+  pd <- cbind.data.frame(sample_name, sample_group)
+  
+  raw_data <- readMSData(files = files, pdata = new("NAnnotatedDataFrame", pd),
+                       mode = "onDisk")
+  # remove co-elution and column wash phase
+  # filter_data <- filterRt(raw_data,rt = c(100,900))
+  cwp <- CentWaveParam(peakwidth = c(para$min_peakwidth,para$max_peakwidth), 
+                       ppm             = paran$ppm,
+                       noise           = paran$noise,
+                       snthresh        = paran$snthresh,
+                       mzdiff          = paran$mzdiff,
+                       prefilter       = c(para$prefilter,para$value_of_prefilter),
+                       mzCenterFun     = paran$mzCenterFun,
+                       integrate       = paran$integrate,
+                       fitgauss        = paran$fitgauss,
+                       verboseColumns  = paran$verbose.columns)
+  owp <- ObiwarpParam(binSize        = paran$profStep,
+                      centerSample   = 6,
+                      response       = paran$response,
+                      distFun        = paran$distFunc,
+                      gapInit        = paran$gapInit,
+                      gapExtend      = paran$gapExtend,
+                      factorDiag     = paran$factorDiag,
+                      factorGap      = paran$factorGap,
+                      localAlignment = ifelse(paran$localAlignment==0,F,T))
+  pdp <- PeakDensityParam(sampleGroups = pd$sample_group,
+                        bw      = paran$bw,
+                        minFraction = paran$minfrac,
+                        minSamples = paran$minsamp,
+                        maxFeatures = paran$max,
+                        binSize = paran$mzwid)
+
+  xdata <- findChromPeaks(raw_data, param = cwp)
+  # xdata <- findChromPeaks(filter_data, param = cwp)
+  xdata <- adjustRtime(xdata, param = owp)
+  xdata <- groupChromPeaks(xdata, param = pdp)
+  xdata <- fillChromPeaks(xdata)
+  return(xdata)
+}
+```
+
+# Peaks list
+
+This section is used to generate peaks list and related csv files for further analysis.
+
+## Peak picking
+
+This chunk will use the optimized xcms parameters for peak picking. This chunk will generate srmmzrt.csv, srmnmzrt.csv to save the peaks list from positive and negative mode MS1 full scan. The code will also save corresponding xcmsSet object for RAMClustR and CAMERA package.
+
+```{r eval=FALSE}
+# use your own data by changing the data path
+# Positive mode
+path <- 'data/'
+srm <- getrtmz(path,index = c(1:10))
+# back up peak list as csv file and xcmsSet object
+mzrt <- enviGCMS::getmzrt(srm, name = 'srm')
+# Negative mode
+path <- 'datan/'
+srmn <- getrtmzn(path,index = c(1:10))
+# back up peak list as csv file and xcmsSet object
+mzrtn <- enviGCMS::getmzrt(srmn, name = 'srmn')
+```
+
+## Peak filtering
+
+This chunk will use peak list csv file as input to perform peak filtering based on matrix sample and RSD% cutoff.
+
+This chunk will save the filtered peaks list as `rppmzrt.csv` and `rpnmzrt.csv` for positive and negative mode.
+
+```{r eval=FALSE}
+# Positive data
+mzrt <- enviGCMS::getmzrtcsv('srmmzrt.csv')
+# calculate group mean and rsd%
+mzrtm <- enviGCMS::getdoe(mzrt)
+gm <- mzrtm$groupmean
+gr <- mzrtm$grouprsd
+# find the blank group and pool QC group, demo data only have matrix blank
+srm <- grepl('nist',colnames(gm))
+blk <- grepl('matrix',colnames(gm))
+# pqc <- grepl('pool',colnames(gm))
+# filter by pool QC and blank's group mean intensity(pool QC should larger than three times of blank), return numbers and index
+# in demo data, use sample average intensity for each peak
+sum(indexmean <- apply(gm,1,function(x) all(x[srm]> 3*x[blk])))
+# filter by pool qc rsd%, return numbers and index
+# select rsd% cutoff 30
+rsdcf <- 30
+sum(indexrsd <- apply(gr,1,function(x) ifelse(is.na(x[2]),T,x[2]<rsdcf)))
+# overlap with rsd% and mean filter
+sum(index <- indexmean&indexrsd)
+# 4711
+qcindex <- grepl('matrix',mzrt$group$sample_group)
+mzrtfilter <- enviGCMS::getfilter(mzrt,rowindex = index)
+# save the filtered peak list
+enviGCMS::getcsv(mzrtfilter,'rpp')
+# Negative data
+mzrt <- enviGCMS::getmzrtcsv('srmnmzrt.csv')
+# calculate group mean and rsd%
+mzrtm <- enviGCMS::getdoe(mzrt)
+gm <- mzrtm$groupmean
+gr <- mzrtm$grouprsd
+# find the blank group and pool QC group, demo data only have matrix blank
+srm <- grepl('nist',colnames(gm))
+blk <- grepl('matrix',colnames(gm))
+# pqc <- grepl('pool',colnames(gm))
+# filter by pool QC and blank's group mean intensity(pool QC should larger than three times of blank), return numbers and index
+# in demo data, use sample average intensity for each peak
+sum(indexmean <- apply(gm,1,function(x) all(x[srm]> 3*x[blk])))
+# filter by pool qc rsd%, return numbers and index
+# select rsd% cutoff 30
+rsdcf <- 30
+sum(indexrsd <- apply(gr,1,function(x) ifelse(is.na(x[2]),T,x[2]<rsdcf)))
+# overlap with rsd% and mean filter
+sum(indexn <- indexmean&indexrsd)
+# 3608
+# new list, update group and remove pool qc/blk and save the new csv file
+qcindex <- grepl('matrix',mzrt$group$sample_group)
+mzrtfiltern <- enviGCMS::getfilter(mzrt,rowindex = indexn)
+sum(index <- indexmean&indexrsd)
+# 3608
+enviGCMS::getcsv(mzrtfiltern,'rpn')
+```
+
+## Precusor selection
+
+This section will select the precursor ions from MS1 full scan data for MS2 spectra data collection.
+
+### CAMERA
+
+This chunk is the code to extract precursor ions list by CAMERA package. Noticing CAMERA is not designed for this purpose. This chunk will generate `cameratar.csv` and `camerantar.csv` to save the selected precursors from CAMERA package.
+
+```{r eval=FALSE}
+# load object for CAMERA
+srmxset <- readRDS("srmxset.rds")
+srmnxset <- readRDS("srmnxset.rds")
+# CAMERA
+# Positive mode
+xsa <- CAMERA::annotate(srmxset, perfwhm=0.7, cor_eic_th=0.75,
+ppm=10, polarity="positive")
+peaklist <- CAMERA::getPeaklist(xsa)
+peaklist$meanpeak <- apply(peaklist[,c(15:19)],1,mean)
+length(unique(peaklist$pcgroup))
+grouprt <- aggregate(peaklist$rt,by=list(peaklist$pcgroup), median)
+grouprt$psgrp <- as.numeric(grouprt$Group.1)
+grouprt2 <- merge(data.frame(xsa@annoGrp),grouprt,by='psgrp')
+cre <- cbind.data.frame(mz=grouprt2$mass+1.0073,rt=grouprt2$x)
+write.csv(cre,'cameratar.csv')
+cre <- read.csv('cameratar.csv')
+# 862
+
+# Negative mode
+xsa <- CAMERA::annotate(srmnxset, perfwhm=0.7, cor_eic_th=0.75,
+ppm=10, polarity="negative")
+peaklistn <- CAMERA::getPeaklist(xsa)
+peaklistn$meanpeak <- apply(peaklistn[,c(15:19)],1,mean)
+length(unique(peaklistn$pcgroup))
+grouprt <- aggregate(peaklistn$rt,by=list(peaklistn$pcgroup), median)
+grouprt$psgrp <- as.numeric(grouprt$Group.1)
+grouprt2 <- merge(data.frame(xsa@annoGrp),grouprt,by='psgrp')
+cren <- cbind.data.frame(mz=grouprt2$mass-1.0073,rt=grouprt2$x)
+write.csv(cren,'camerantar.csv')
+cren <- read.csv('camerantar.csv')
+# 710
+```
+
+### RAMClustR
+
+This chunk is the code to extract precursor ions list by RAMClustR package. Noticing RAMClustR is not designed for this purpose. This chunk will generate `ramclusttar.csv` and `ramclustntar.csv` to save the selected precursors from RAMClustR package.
+
+```{r eval=FALSE}
+srmxset <- readRDS("srmxset.rds")
+srmnxset <- readRDS("srmnxset.rds")
+# Positive mode
+rcp <- RAMClustR::ramclustR(srmxset)
+RC <- RAMClustR::do.findmain(rcp, mode = "positive", mzabs.error = 0.02, ppm.error = 10)
+meanpeak <- apply(t(rcp$MSdata),1,mean)
+df <-  cbind.data.frame(mz = rcp$fmz, rt = rcp$frt, cluster = rcp$featclus,meanpeak)
+mol <- data.frame(mz = RC$M+1.0073,rt=RC$clrt)
+write.csv(mol,'ramclusttar.csv')
+rre <- read.csv('ramclusttar.csv')
+# 542
+
+# Negative mode
+rcp <- RAMClustR::ramclustR(srmnxset)
+RC <- RAMClustR::do.findmain(rcp, mode = "negative", mzabs.error = 0.02, ppm.error = 10)
+meanpeak <- apply(t(rcp$MSdata),1,mean)
+dfn <-  cbind.data.frame(mz = rcp$fmz, rt = rcp$frt, cluster = rcp$featclus,meanpeak)
+moln <- data.frame(mz = RC$M-1.0073,rt=RC$clrt)
+write.csv(moln,'ramclustntar.csv')
+rren <- read.csv('ramclustntar.csv')
+# 770
+```
+
+### pmd
+
+This chunk is the code to extract precursor ions list by pmd package and GlobalStd algorithm. This chunk will generate `pretar.csv` and `prentar.csv` to save the selected precursors from pmd package.
+
+```{r eval=FALSE}
+# PMD
+pos <- enviGCMS::getmzrtcsv('rppmzrt.csv')
+neg <- enviGCMS::getmzrtcsv('rpnmzrt.csv')
+
+pospmd <- pmd::globalstd(pos,sda=F,ng = NULL)
+# 849
+pospmd2 <- pmd::getcluster(pospmd,corcutoff = 0.9)
+sum(pospmd2$stdmassindex2)
+# 780
+pre <- cbind.data.frame(mz=pospmd2$mz[pospmd2$stdmassindex2],rt=pospmd2$rt[pospmd2$stdmassindex2])
+write.csv(pre,'pretar.csv')
+pre <- read.csv('pretar.csv')
+
+negpmd <- pmd::globalstd(neg,sda=F,ng = NULL)
+# 761
+negpmd2 <- pmd::getcluster(negpmd,corcutoff = 0.9)
+sum(negpmd2$stdmassindex2)
+# 723
+pren <- cbind.data.frame(mz=negpmd2$mz[negpmd2$stdmassindex2],rt=negpmd2$rt[negpmd2$stdmassindex2])
+write.csv(pren,'prentar.csv')
+pren <- read.csv('prentar.csv')
+# 723
+```
+
+GlobalStd algorithm will not use predefined redundant peaks information and the unknown adducts can be found based on frequency in the data. This chunk will generate figure S4 and S5 for positive and negative mode data.
+
+```{r}
+# PMD
+pos <- enviGCMS::getmzrtcsv('rppmzrt.csv')
+neg <- enviGCMS::getmzrtcsv('rpnmzrt.csv')
+
+pospmd <- pmd::globalstd(pos,sda=F,ng = NULL)
+# png('pospaired.png',width = 1500, height = 1500, res=300)
+pmd::plotpaired(pospmd)
+# dev.off()
+negpmd <- pmd::globalstd(neg,sda=F,ng = NULL)
+# png('negpaired.png',width = 1500, height = 1500, res=300)
+pmd::plotpaired(negpmd)
+# dev.off()
+```
+
+### Generate peaks list for multiple injections
+
+Those functions are designed for multiple injections. Please read the purpose of each function in the comments and do not change the function unless you know what you are doing.
+
+```{r}
+# pmdtarget is used to generate precursor ions list for targeted analysis
+pmdtarget <- function(list,Dppm = 20,Drt = 0.5,ce = NA, name = 'target',n=NULL){
+        head <-  c('On', 'Prec. m/z', 'Z','Ret. Time (min)', 'Delta Ret. Time (min)', 'Iso. Width', 'Collision Energy')
+        mz <- list$mz[list$stdmassindex]
+        rt <- round(list$rt[list$stdmassindex]/60,3)
+        temp = cbind('TRUE',mz,1,rt,Drt,'Narrow (~1.3 m/z)',ce)
+        data <- rbind(head,temp)
+        colnames(data) <- c('TargetedMSMSTable',rep('',6))
+
+        if(is.null(n)){
+                name2 <- paste0(name,'.csv')
+                utils::write.table(data,file = name2,row.names = F,col.names = F,sep=",")
+
+        }else{
+                idx <- targetsep(list$rt[list$stdmassindex],Drt,n)
+                for(i in 1:length(table(idx))){
+                        namei <- paste0(name,i,'.csv')
+                        idx2 <- idx == i
+                        idx3 <- c(T,idx2)
+                        datai <- data[idx3,]
+                        utils::write.table(datai,file = namei,row.names = F,col.names = F,sep=",")
+                }
+        }
+
+        return(data)
+}
+# gettarget is used to generate list for targeted analysis
+gettarget <- function(mz,rt,Drt=0.5,Dppm=20,ce=NA,name,n=NULL){
+  head <-  c('On', 'Prec. m/z', 'Z','Ret. Time (min)', 'Delta Ret. Time (min)', 'Iso. Width', 'Collision Energy')
+        rtn <- round(rt/60,3)
+        temp = cbind('TRUE',mz,1,rtn,Drt,'Narrow (~1.3 m/z)',ce)
+        data <- rbind(head,temp)
+        colnames(data) <- c('TargetedMSMSTable',rep('',6))
+
+        if(is.null(n)){
+                name2 <- paste0(name,'.csv')
+                utils::write.table(data,file = name2,row.names = F,col.names = F,sep=",")
+
+        }else{
+                idx <- targetsep(rt,Drt,n)
+                for(i in 1:length(table(idx))){
+                        namei <- paste0(name,i,'.csv')
+                        idx2 <- idx == i
+                        idx3 <- c(T,idx2)
+                        datai <- data[idx3,]
+                        utils::write.table(datai,file = namei,row.names = F,col.names = F,sep=",")
+                }
+        }
+
+        return(data)
+}
+# targetsep is used to split peaks list base on retention time, retention time range and the max scans per second (n).
+targetsep <- function(rt,Drt,n=6,seed=42){
+        set.seed(seed)
+        D <- Drt*60
+        dis <- stats::dist(rt, method = "manhattan")
+        fit <- stats::hclust(dis)
+        inji <- rtcluster <- stats::cutree(fit, h = D)
+        maxd <- max(table(rtcluster))
+        m <- length(unique(rtcluster))
+        inj <- ceiling(maxd/n)
+        message(paste('You need',inj,'injections!'))
+        for(i in c(1:m)) {
+                z = 1:inj
+                x <- rt[rtcluster==i]
+                while(length(x) > inj & length(x)>n){
+                        t <- sample(x,n)
+                        w <- sample(z,1)
+                        inji[rt %in% t] <- w
+                        z <- z[!(z%in%w)]
+                        x <- x[!(x %in% t)]
+                }
+                inji[rtcluster==i & rt %in% x] <- sample(z,sum(rtcluster==i & rt %in% x),replace = T)
+        }
+        return(inji)
+}
+```
+
+This chunk will use the predefined function in the beginning to generate precursor ions list for targeted multiple injections to collect MS2 data. Then manually move the files to `postar` and `negtar` folders to collect MS2 data from instruments. 
+
+```{r eval=FALSE}
+# generate precursor peaks list for MS2 targeted analysis
+rt <- gettarget(rre$mz,rre$rt,n=6,Drt = 0.2,ce=20,name = 'ramclustr')
+ct <- gettarget(cre$mz,cre$rt,n=6,Drt = 0.2,ce=20,name = 'CAMERA')
+pt <- gettarget(pre$mz,pre$rt,n=6,Drt = 0.2,ce=20,name = 'pmd')
+rtn <- gettarget(rren$mz,rren$rt,n=6,Drt = 0.2,ce=20,name = 'ramclustrn')
+ctn <- gettarget(cren$mz,cren$rt,n=6,Drt = 0.2,ce=20,name = 'CAMERAn')
+ptn <- gettarget(pren$mz,pren$rt,n=6,Drt = 0.2,ce=20,name = 'pmdn')
+```
+
+## NIST Known compounds
+
+This section will compare the known compounds in NIST1950 among different annotation workflow. Those known compounds are in `nist1950.csv`.
+
+```{r}
+# import NIST known compounds
+target <- read.csv('nist1950.csv',stringsAsFactors = F)
+# generate protonated and deprotonated ions for positive and negative mode
+masspos <- target$massall[!is.na(target$massall)]+1.0079
+massneg <- target$massall[!is.na(target$massall)]-1.0079
+
+pre <- read.csv('pretar.csv')
+pren <- read.csv('prentar.csv')
+rre <- read.csv('ramclusttar.csv')
+rren <- read.csv('ramclustntar.csv')
+cre <- read.csv('cameratar.csv')
+cren <- read.csv('camerantar.csv')
+# Check the coverage of known compounds
+sum(unique(round(rre$mz,2)) %in% round(masspos,2))
+# 5
+sum(unique(round(pre$mz,2)) %in% round(masspos,2))
+# 6
+sum(unique(round(cre$mz,2)) %in% round(masspos,2))
+# 3
+sum(unique(round(rren$mz,2)) %in% round(massneg,2))
+# 9
+sum(unique(round(pren$mz,2)) %in% round(massneg,2))
+# 12
+sum(unique(round(cren$mz,2)) %in% round(massneg,2))
+# 4
+```
+
+# MS2 data collection
+
+The MS2 data used in this study could be accessed from figshare and the details are given as comments in this chunk. Those data include seven(positive) and seven(negative) targeted samples from PMDDA selected precursors, eight(positive) and eight(negative) iterative DDA samples with PMDDA selected precursors as inclusion list, eight(positive) and twelve(negative) targeted samples from CAMERA selected precursors, four(positive) and five(negative) targeted samples from RAMClustR selected precursors, two (positive) and two(negative) targeted samples from positive negative connection precursors.
+
+The GNPS annotation results can be accessed [here](https://gnps.ucsd.edu/ProteoSAFe/status.jsp?task=47bd0f0c102c42c09a879ac02c6c302f) for positive mode and [here](https://gnps.ucsd.edu/ProteoSAFe/status.jsp?task=9ace8dc88efd48919efbbfc487379b78) for negative mode. [Here](https://gnps.ucsd.edu/ProteoSAFe/status.jsp?task=f31888117af74214bc9c3be94f4bd405) is the results for positive/negative connection result. Noticing we extracted molecular networking annotation results as 'rppanno.csv', 'rpnanno.csv', and 'posneganno.csv' for positive, negative and positive-negative connection, respectively.
+
+```{r eval=FALSE}
+# create data folder for MS2 data
+dir.create(file.path('MS2'), showWarnings = FALSE)
+setwd(file.path('MS2'))
+
+# download PMDDA precursor MS2 positive data into PMDDA folder
+dir.create(file.path('PMDDA'), showWarnings = FALSE)
+setwd(file.path('PMDDA'))
+article_id <- 13253942
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+pmddafile <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+# download CAMERA precursor MS2 positive data into CAMERA folder
+dir.create(file.path('CAMERA'), showWarnings = FALSE)
+setwd(file.path('CAMERA'))
+article_id <- 13256429
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+camerafile <- list.files(path,pattern = '*.mzXML',recursive = T,full.names = T)
+setwd('..')
+# download RAMClustR precursor MS2 positive data into RAMClustR folder
+dir.create(file.path('RAMClustR'), showWarnings = FALSE)
+setwd(file.path('RAMClustR'))
+article_id <- 13256390
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+ramclustrfile <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+# download iterative DDA with PMDDA precursor MS2 positive data into iDDA folder
+dir.create(file.path('iDDA'), showWarnings = FALSE)
+setwd(file.path('iDDA'))
+article_id <- 14445660
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+iddafiles <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+
+# download PMDDA precursor MS2 negative data into PMDDAn folder
+dir.create(file.path('PMDDAn'), showWarnings = FALSE)
+setwd(file.path('PMDDAn'))
+article_id <- 13253912
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+pmddafilen <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+# download CAMERA precursor MS2 negative data into CAMERAn folder
+dir.create(file.path('CAMERAn'), showWarnings = FALSE)
+setwd(file.path('CAMERAn'))
+article_id <- 13252673
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+camerafilen <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+# download RAMClustR precursor MS2 negative data into RAMClustRn folder
+dir.create(file.path('RAMClustRn'), showWarnings = FALSE)
+setwd(file.path('RAMClustRn'))
+article_id <- 13253882
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+ramclustrfilen <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+# download iterative DDA with PMDDA precursor MS2 negative data into iDDAn folder
+dir.create(file.path('iDDAn'), showWarnings = FALSE)
+setwd(file.path('iDDAn'))
+article_id <- 14445711
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+iddafilesn <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+
+# download pos neg connection MS2 files
+dir.create(file.path('posneg'), showWarnings = FALSE)
+setwd(file.path('posneg'))
+article_id <- 13256456
+details <- fs_details(article_id, mine = FALSE, session = NULL)
+name <- sapply(details$files,function(x) x$name)
+url <- sapply(details$files,function(x) x$download_url)
+download.file(url, name, method = 'libcurl')
+path <- getwd()
+posneg <- list.files(path,pattern = '*.mzML',recursive = T,full.names = T)
+setwd('..')
+setwd('..')
+```
+
+# MS2 data analysis
+
+This section is used to compare the MS2 precursor coverage with MS1 full scan among different workflows.
+
+### Check MS1/MS2 linkage
+
+This part will extract the precursors from MS2 data and compare them with MS1 full scan data to know the coverage of MS2 collection. This chunk will generate `rppms1.csv` and `rpnms1.csv` to save the precursor ions in MS2 data.
+
+```{r eval=FALSE}
+mzdatapath <- 'MS2'
+file <- list.files(mzdatapath, 
+                          recursive = TRUE, full.names = TRUE)
+# get the positive MS2 data
+index <- grepl('RPP',file)
+dda_data <- MSnbase::readMSData(file[index], mode = "onDisk")
+cwp <- xcms::CentWaveParam(noise = 0, ppm = 10,
+                     peakwidth = c(9.1, 90.5),mzdiff = -0.0197)
+dda_data <- xcms::findChromPeaks(dda_data, param = cwp)
+dda_spectra <- xcms::chromPeakSpectra(dda_data)
+
+mz <- precursorMz(dda_spectra)
+mz2 <- mz(dda_spectra)
+rt <- rtime(dda_spectra)
+files <- fromFile(dda_spectra)
+df <- cbind.data.frame(mz=mz,rt=rt,files=files)
+file2 <- cbind.data.frame(idx=c(1:length(file)),file)
+x <- merge(file2,df,by.x='idx',by.y='files')
+write.csv(x,'rppms1.csv')
+
+mzdatapath <- 'data/MS2/'
+file <- list.files(mzdatapath, 
+                          recursive = TRUE, full.names = TRUE)
+dda_data <- MSnbase::readMSData(file[!index], mode = "onDisk")
+cwp <- xcms::CentWaveParam(noise = 0, ppm = 10,
+                     peakwidth = c(9.1, 90.5),mzdiff = -0.0197)
+dda_data <- xcms::findChromPeaks(dda_data, param = cwp)
+dda_spectra <- chromPeakSpectra(dda_data)
+
+mz <- precursorMz(dda_spectra)
+mz2 <- mz(dda_spectra)
+rt <- rtime(dda_spectra)
+files <- fromFile(dda_spectra)
+df <- cbind.data.frame(mz=mz,rt=rt,files=files)
+file2 <- cbind.data.frame(idx=c(1:34),file)
+x <- merge(file2,df,by.x='idx',by.y='files')
+write.csv(x,'rpnms1.csv')
+```
+
+This chunk is used to generate figure S1 and figure S2 to compare the MS1 coverage of different MS2 workflow.
+
+```{r}
+pos <- enviGCMS::getmzrtcsv('rppmzrt.csv')
+neg <- enviGCMS::getmzrtcsv('rpnmzrt.csv')
+
+rppms1 <- read.csv('rppms1.csv')
+pmddams1 <- rppms1[grepl('pmd',rppms1$file),]
+idx <- enviGCMS::getalign(pmddams1$mz,pos$mz,pmddams1$rt,pos$rt,ppm = 5,deltart = 5)
+pmddams1link <- pmddams1[unique(idx$xid),]
+camerams1 <- rppms1[grepl('camera',rppms1$file),]
+idx <- enviGCMS::getalign(camerams1$mz,pos$mz,camerams1$rt,pos$rt,ppm = 5,deltart = 5)
+camerams1link <- camerams1[unique(idx$xid),]
+ramms1 <- rppms1[grepl('ram',rppms1$file),]
+idx <- enviGCMS::getalign(ramms1$mz,pos$mz,ramms1$rt,pos$rt,ppm = 5,deltart = 5)
+ramms1link <- ramms1[unique(idx$xid),]
+
+#png('ms1link.png',width = 1500,height = 1500,res=300)
+layout(matrix(c(1,2,4,6,1,3,5,7),nrow = 4,ncol = 2))
+par(mar = c(2.5,0,0,0), oma = c(5,4,0.5,0.5), las =1)
+plot(pos$mz~pos$rt,pch=19,xlab = 'retention time(s)',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3)
+mtext('MS1', side = 3, line = -1.5, adj = 0.025)
+par(mar=c(0,0,0,0))
+plot(pmddams1$mz~pmddams1$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+axis(side = 2)
+mtext('PMDDA MS1', side = 3, line = -1.5, adj = 0.025)
+plot(pmddams1link$mz~pmddams1link$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('PMDDA MS1 linkage', side = 3, line = -1.5, adj = 0.025)
+plot(camerams1$mz~camerams1$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+axis(side = 2)
+mtext('CAMERA MS1', side = 3, line = -1.5, adj = 0.025)
+plot(camerams1link$mz~camerams1link$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('CAMERA MS1 linkage', side = 3, line = -1.5, adj = 0.025)
+plot(ramms1$mz~ramms1$rt,pch=19,xlab = 'retention time(s)',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('RamClustR MS1', side = 3, line = -1.5, adj = 0.025)
+axis(side = 2)
+axis(side = 1)
+plot(ramms1link$mz~ramms1link$rt,pch=19,xlab = 'retention time(s)',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('RamClustR MS1 linkage', side = 3, line = -1.5, adj = 0.025)
+axis(side = 1)
+mtext("retention time(s)", side = 1, outer = TRUE, line = 3)
+mtext("m/z", side = 2, outer = TRUE, line = 3, las = 3)
+#dev.off()
+
+rpnms1 <- read.csv('rpnms1.csv')
+pmddams1 <- rpnms1[grepl('pmd',rpnms1$file),]
+idx <- enviGCMS::getalign(pmddams1$mz,neg$mz,pmddams1$rt,neg$rt,ppm = 5,deltart = 5)
+pmddams1link <- pmddams1[unique(idx$xid),]
+camerams1 <- rpnms1[grepl('camera',rpnms1$file),]
+idx <- enviGCMS::getalign(camerams1$mz,neg$mz,camerams1$rt,neg$rt,ppm = 5,deltart = 5)
+camerams1link <- camerams1[unique(idx$xid),]
+ramms1 <- rpnms1[grepl('ram',rpnms1$file),]
+idx <- enviGCMS::getalign(ramms1$mz,neg$mz,ramms1$rt,neg$rt,ppm = 5,deltart = 5)
+ramms1link <- ramms1[unique(idx$xid),]
+
+#png('ms1linkn.png',width = 1500,height = 1500,res=300)
+layout(matrix(c(1,2,4,6,1,3,5,7),nrow = 4,ncol = 2))
+par(mar = c(2.5,0,0,0), oma = c(5,4,0.5,0.5), las =1)
+plot(neg$mz~neg$rt,pch=19,xlab = 'retention time(s)',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3)
+mtext('MS1', side = 3, line = -1.5, adj = 0.025)
+par(mar=c(0,0,0,0))
+plot(pmddams1$mz~pmddams1$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+axis(side = 2)
+mtext('PMDDA MS1', side = 3, line = -1.5, adj = 0.025)
+plot(pmddams1link$mz~pmddams1link$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('PMDDA MS1 linkage', side = 3, line = -1.5, adj = 0.025)
+plot(camerams1$mz~camerams1$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+axis(side = 2)
+mtext('CAMERA MS1', side = 3, line = -1.5, adj = 0.025)
+plot(camerams1link$mz~camerams1link$rt,pch=19,xlab = '',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('CAMERA MS1 linkage', side = 3, line = -1.5, adj = 0.025)
+plot(ramms1$mz~ramms1$rt,pch=19,xlab = 'retention time(s)',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('RamClustR MS1', side = 3, line = -1.5, adj = 0.025)
+axis(side = 2)
+axis(side = 1)
+plot(ramms1link$mz~ramms1link$rt,pch=19,xlab = 'retention time(s)',ylab = 'm/z',main='',xlim = c(0,1000),ylim = c(0,1200),cex=0.3,axes=F)
+mtext('RamClustR MS1 linkage', side = 3, line = -1.5, adj = 0.025)
+axis(side = 1)
+mtext("retention time(s)", side = 1, outer = TRUE, line = 3)
+mtext("m/z", side = 2, outer = TRUE, line = 3, las = 3)
+#dev.off()
+```
+
+### GNPS molecular networking comparison
+
+This section will compare the annotation results based on GNPS molecular networking and generate figure 2 in the manuscript.
+
+```{r}
+# import the MS1 full scan peak list
+rpp <- enviGCMS::getmzrtcsv('rppmzrt.csv')
+rpn <- enviGCMS::getmzrtcsv('rpnmzrt.csv')
+# import GNPS molecular network results for positive mode
+posanno <- read.csv('rppanno.csv')
+RPP1 <- posanno[,c(9:12)]
+# positive data and align them to MS1 full scan
+posalign <- enviGCMS::getalign(posanno$precursor.mass,rpp$mz,posanno$RTMean,rpp$rt)
+posgnps <- RPP1[unique(posalign$xid),]
+# 599
+posgnps[posgnps>0] <- 1
+colnames(posgnps) <- c('iDDA','PMDDA','RAMClustR','CAMERA')
+# generate UpSet plot as figure 1
+library('UpSetR')
+#png('comparepclust.png',res=300,width = 1500,height = 1500)
+listinput <- list(PMDDA=which(posgnps$PMDDA!=0),CAMERA=which(posgnps$CAMERA!=0),RAMClustR=which(posgnps$RAMClustR!=0),iDDA=which(posgnps$iDDA!=0))
+upset(fromList(listinput), order.by = "freq",nsets = 4)
+grid::grid.text("Positive",x = 0.15, y=0.95, gp=grid::gpar(fontsize=12))
+#dev.off()
+# import GNPS molecular network results for negative mode
+neganno <- read.csv('rpnanno.csv')
+RPN1 <- neganno[,c(9:12)]
+# negative data and align them to MS1 full scan
+negalign <- enviGCMS::getalign(neganno$precursor.mass,rpn$mz,neganno$RTMean,rpn$rt)
+neggnps <- RPN1[unique(negalign$xid),]
+# 590
+neggnps[neggnps>0] <- 1
+colnames(neggnps) <- c('iDDA','PMDDA','CAMERA','RAMClustR')
+# generate UpSet plot as figure 2
+library('UpSetR')
+#png('comparenclust.png',res=300,width = 1500,height = 1500)
+listinput <- list(PMDDA=which(posgnps$PMDDA!=0),CAMERA=which(neggnps$CAMERA!=0),RAMClustR=which(neggnps$RAMClustR!=0),iDDA=which(neggnps$iDDA!=0))
+upset(fromList(listinput), order.by = "freq",nsets = 4)
+grid::grid.text("Negative",x = 0.15, y=0.95, gp=grid::gpar(fontsize=12))
+#dev.off()
+```
+
+### GNPS identification comparison
+
+This chunk will generate figure S3 to compare the annotation results.
+
+```{r}
+# import GNPS annotation results with compounds name and remove the duplicates for positive mode
+posanno <- read.csv('rppanno.csv')
+posanno2 <- posanno[!duplicated(posanno$Compound_Name)&(posanno$IonMode == 'positive'|posanno$IonMode == 'Positive'),]
+# positive data and align them to MS1 full scan
+RPP1 <- posanno2[,c(9:12)]
+posalign <- enviGCMS::getalign(posanno2$precursor.mass,rpp$mz,posanno2$RTMean,rpp$rt)
+# remove the annotation without MS1 linkage
+posgnps <- RPP1[unique(posalign$xid),]
+# 93
+posgnps[posgnps>0] <- 1
+colnames(posgnps) <- c('iDDA','PMDDA','RAMClustR','CAMERA')
+# compare the results across different workflow
+# generate UpSet plot as figure S3
+library('UpSetR')
+#png('comparep.png',res=300,width = 1500,height = 1500)
+listinput <- list(Matrix=which(posgnps$DDAMatrix!=0),DDA=which(posgnps$DDA!=0),PMDDA=which(posgnps$PMDDA!=0),CAMERA=which(posgnps$CAMERA!=0),RAMClustR=which(posgnps$RAMClustR!=0),iDDA=which(posgnps$iDDA!=0))
+upset(fromList(listinput), order.by = "freq",nsets = 6)
+grid::grid.text("Positive",x = 0.15, y=0.95, gp=grid::gpar(fontsize=12))
+#dev.off()
+# import GNPS annotation results with compounds name and remove the duplicates for negative mode
+neganno <- read.csv('rpnanno.csv')
+neganno2 <- neganno[!duplicated(neganno$Compound_Name)&(neganno$IonMode == 'negative'|neganno$IonMode == 'Negative'),]
+# negative data and align them to MS1 full scan
+RPN1 <- neganno2[,c(9:12)]
+negalign <- enviGCMS::getalign(neganno2$precursor.mass,rpn$mz,neganno2$RTMean,rpn$rt)
+neggnps <- RPN1[unique(negalign$xid),]
+# 46
+neggnps[neggnps>0] <- 1
+colnames(neggnps) <- c('iDDA','PMDDA','RAMClustR','CAMERA')
+# generate UpSet plot as figure S3
+library('UpSetR')
+#png('comparen.png',res=300,width = 1500,height = 1500)
+listinput <- list(PMDDA=which(neggnps$PMDDA!=0),CAMERA=which(neggnps$CAMERA!=0),RAMClustR=which(neggnps$RAMClustR!=0),iDDA=which(neggnps$iDDA!=0))
+upset(fromList(listinput), order.by = "freq",nsets = 4)
+grid::grid.text("Negative",x = 0.15, y=0.95, gp=grid::gpar(fontsize=12))
+#dev.off()
+```
+
+### xcms extracted spectra comparison
+
+This section use xcms package to extract MS2 spectra as mgf files and compared different workflow (PMDDA, CAMERA, RAMClustR). Those mgf files can be saved for further annotation. This chunk will also save the linked MS1 full scan data to check the coverage of different workflow. Those linked csv files name have a pattern with their workflow name plus `mzrt.csv`. 
+
+```{r eval=FALSE}
+# this is the function to compare the linked MS1 and MS2 data among different workflow and save them as mgf files
+ms1linkms2 <- function(filems1,filems2,name){
+  dda_data <- MSnbase::readMSData(filems2, mode = "onDisk")
+  cwp <- xcms::CentWaveParam(noise = 0, ppm = 10,
+                     peakwidth = c(9.1, 90.5),mzdiff = -0.0197)
+  dda_data <- xcms::findChromPeaks(dda_data, param = cwp)
+  dda_spectra <- xcms::chromPeakSpectra(dda_data)
+
+  mz <- precursorMz(dda_spectra)
+  rt <- rtime(dda_spectra)
+
+  neg <- enviGCMS::getmzrtcsv(filems1)
+  idx <- enviGCMS::getalign(mz,neg$mz,rt,neg$rt,ppm = 5,deltart = 5)
+  idx$grp <- paste0('M',round(idx$mz2,4),'T',round(idx$rt2,1))
+  x <- dda_spectra[idx$xid]
+  message(paste(length(unique(idx$grp)),'spectra could be found'))
+  idx2 <- enviGCMS::getalign(neg$mz,mz,neg$rt,rt,ppm = 5,deltart = 5)
+  dda <- enviGCMS::getfilter(neg,rowindex = unique(idx2$xid))
+  x@elementMetadata$peak_id <- idx$grp
+  spec <- combineSpectra(x, fcol="peak_id", method = consensusSpectrum, mzd = 0.02,ppm = 5, minProp = 0.6, weighted = FALSE,intensityFun = sum, mzFun = median,timeDomain=TRUE)
+  scan <- sapply(spec,function(x) x@acquisitionNum)
+  spec@elementMetadata$peak_id <- paste0('FT',scan)
+  writeMgfData(spec,paste0(name,'.mgf'))
+  # Row.names <- paste0('FT',scan)[match(rownames(dda$data),unique(idx$grp))]
+  # mzmed <- dda$mz
+  # rtmed <- dda$rt
+  # df <- cbind(Row.names,mzmed,rtmed,dda$data)
+  # write.table(df,paste0(name,'.txt'),sep = '\t',row.names = F)
+  enviGCMS::getcsv(dda,name)
+}
+# extract positive MS2 data
+library(xcms)
+mzdatapath <- 'MS2'
+file <- list.files(mzdatapath, 
+                          recursive = TRUE, full.names = TRUE)
+file <- file[grepl('RPP',file)]
+
+camera <- file[grepl('CAMERA',file)]
+pmdda <- file[grepl('pmd',file)]
+ramclustr <- file[grepl('RAMClustR',file)]
+idda <- file[grepl('iDDA',file)]
+posneg <- file[grepl('posneg',file)]
+
+ms1linkms2('rppmzrt.csv',posneg,'posneg')
+# 33
+ms1linkms2('rppmzrt.csv',ramclustr,'ramclustr')
+# 163
+ms1linkms2('rppmzrt.csv',camera,'camera')
+# 34
+ms1linkms2('rppmzrt.csv',pmdda,'pmdda')
+# 293
+# extract negative MS2 data
+file <- list.files(mzdatapath, 
+                          recursive = TRUE, full.names = TRUE)
+file <- file[grepl('RPN',file)]
+camera <- file[grepl('CAMERA',file)]
+pmdda <- file[grepl('pmd',file)]
+ramclustr <- file[grepl('RAMClustR',file)]
+posneg <- file[grepl('posneg',file)]
+
+ms1linkms2('rpnmzrt.csv',posneg,'posnegn')
+# 33
+ms1linkms2('rpnmzrt.csv',ramclustr,'ramclustrn')
+# 150
+ms1linkms2('rpnmzrt.csv',camera,'cameran')
+# 46
+ms1linkms2('rpnmzrt.csv',pmdda,'pmddan')
+# 254
+```
+
+### low intensity issue
+
+This chunk is used to check the coverage of low intensity MS1 precursor of different workflows and compare with iterative DDA workflow (figure S6). 
+
+```{r}
+pmdda <- enviGCMS::getmzrtcsv('pmddanmzrt.csv')
+dfp <- paste0(round(pmdda$mz,4),'@',round(pmdda$rt,1))
+# 126
+camera <- enviGCMS::getmzrtcsv('cameranmzrt.csv')
+dfc <- paste0(round(camera$mz,4),'@',round(camera$rt,1))
+# 33
+ramclustr <- enviGCMS::getmzrtcsv('ramclustrnmzrt.csv')
+dfr <- paste0(round(ramclustr$mz,4),'@',round(ramclustr$rt,1))
+# 66
+idda <- enviGCMS::getmzrtcsv('iddanmzrt.csv')
+dfi <-paste0(round(idda$mz,4),'@',round(idda$rt,1))
+
+mpmdda <- apply(pmdda$data,1,mean)
+mcamera <- apply(camera$data,1,mean)
+mramclustr <- apply(ramclustr$data,1,mean)
+midda <- apply(idda$data,1,mean)
+
+i <- setdiff(dfi,unique(c(dfc,dfp,dfr)))
+p <- setdiff(dfp,unique(c(dfc,dfi,dfr)))
+r <- setdiff(dfr,unique(c(dfc,dfi,dfp)))
+c <- setdiff(dfc,unique(c(dfi,dfp,dfr)))
+mpmdda <- apply(pmdda$data[dfp%in%p,],1,mean)
+midda <- apply(idda$data[dfi%in%i,],1,mean)
+mcamera <- apply(camera$data[dfc%in%c,],1,mean)
+mramclustr <- apply(ramclustr$data[dfr%in%r,],1,mean)
+
+#png('MS1intensity.png',width=2500,height=1000,res=300)
+par(mfrow=c(1,2),mar=c(4,4,1,1)+0.1)
+boxplot(log(mpmdda),log(mramclustr),log(mcamera),log(midda),xaxt='n',ylab='MS1 intensity on log scale')
+axis(1,at=c(1:4),labels = c('PMDDA','RamClustR','CAMERA','iDDA'),cex.axis=0.5)
+
+pmdda <- enviGCMS::getmzrtcsv('pmddamzrt.csv')
+dfp <- paste0(round(pmdda$mz,4),'@',round(pmdda$rt,1))
+# 126
+camera <- enviGCMS::getmzrtcsv('cameramzrt.csv')
+dfc <- paste0(round(camera$mz,4),'@',round(camera$rt,1))
+# 33
+ramclustr <- enviGCMS::getmzrtcsv('ramclustrmzrt.csv')
+dfr <- paste0(round(ramclustr$mz,4),'@',round(ramclustr$rt,1))
+# 66
+idda <- enviGCMS::getmzrtcsv('iddamzrt.csv')
+dfi <-paste0(round(idda$mz,4),'@',round(idda$rt,1))
+
+mpmdda <- apply(pmdda$data,1,mean)
+mcamera <- apply(camera$data,1,mean)
+mramclustr <- apply(ramclustr$data,1,mean)
+midda <- apply(idda$data,1,mean)
+
+i <- setdiff(dfi,unique(c(dfc,dfp,dfr)))
+p <- setdiff(dfp,unique(c(dfc,dfi,dfr)))
+r <- setdiff(dfr,unique(c(dfc,dfi,dfp)))
+c <- setdiff(dfc,unique(c(dfi,dfp,dfr)))
+mpmdda <- apply(pmdda$data[dfp%in%p,],1,mean)
+midda <- apply(idda$data[dfi%in%i,],1,mean)
+mcamera <- apply(camera$data[dfc%in%c,],1,mean)
+mramclustr <- apply(ramclustr$data[dfr%in%r,],1,mean)
+
+boxplot(log(mpmdda),log(mramclustr),log(mcamera),log(midda),xaxt='n',ylab='MS1 intensity on log scale')
+axis(1,at=c(1:4),labels = c('PMDDA','RamClustR','CAMERA','iDDA'),cex.axis=0.5)
+#dev.off()
+```
+
+### Positive Negative connection
+
+This section can be used to build the connection between positive and negative mode and generate figure 3 in the manuscript.
+
+```{r}
+# import the MS1 data from both modes
+pos <- enviGCMS::getmzrtcsv('rppmzrt.csv')
+neg <- enviGCMS::getmzrtcsv('rpnmzrt.csv')
+# build the connection
+con <- pmd::getposneg(pos,neg)
+# filter the connection based on correlation and retention time
+concor <- con[abs(con$diffrt)<10&abs(con$cor)>0.6,]
+write.csv(concor,'posneg.csv')
+concor <- read.csv('posneg.csv')
+# 100
+# generate precursor ions list
+# ppn <- gettarget(concor$pos,concor$rt,n=6,Drt = 0.2,ce=20,name = 'posnegp')
+# npn <- gettarget(concor$neg,concor$rt,n=6,Drt = 0.2,ce=20,name = 'posnegn')
+# annotation by PMDDA & GNPS
+anno <- read.csv('posneganno.csv')
+anno2 <- anno[(anno$IonMode == 'Positive'|anno$IonMode == 'Negative')&grepl('M\\+H|M\\-H',anno$Adduct)&!duplicated(anno$Compound_Name),]
+# 35
+# PE(P-16:0/20:4) and PE(P-16:0/18:2)
+# png('posneg.png',width = 2000,height = 1500,res = 300)
+plot(concor$pos~concor[,3], main = 'RPP&RPN',xlab='Retention time(s)',ylab = 'm/z',col='blue')
+points(concor$neg~concor[,5],col='red')
+points(anno2$parent.mass~anno2$RTMean,pch=19)
+# dev.off()
+```
