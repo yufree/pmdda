@@ -10,9 +10,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,cache = T,message=F,warning=F)
-library(rmwf)
-sessionInfo()
+knitr::opts_chunk$set(echo = TRUE,cache = FALSE,message=TRUE,warning=FALSE)
 ```
 
 This document is the reproducible code for PMDDA paper with extra comparison with other workflow. To access standalone PMDDA workflow, please install `rmwf` package from [GitHub](https://github.com/yufree/rmwf) and use `rmarkdown::draft("test.Rmd", template = "PMDDA", package = "rmwf")` to create a reproducible workflow document for your own studies. Such workflow is also available through [xcmsrocker](https://hub.docker.com/r/yufree/xcmsrocker/) project.
@@ -87,7 +85,7 @@ This chunk should run first to generate XCMS parameters. We suggest a computer w
 
 ## IPO
 
-This chunk will generate 'para.RData'(positive) and 'paran.RData' (negative) to save the optimized parameters for xcms peak picking.
+This chunk will generate 'para.RData'(positive) and 'paran.RData' (negative) to save the optimized parameters for xcms peak picking. For the usage of IPO package, check [here](https://www.bioconductor.org/packages/release/bioc/html/IPO.html) for technique details.
 
 ```{r IPOpos,eval=FALSE}
 path <- 'data/nist1950'
@@ -147,7 +145,7 @@ save(para,file = 'paran.RData')
 
 ## Wrap function for peak picking
 
-This chunk could be run after you have optimized IPO parameters from last chunk to load the parameters as function.
+This chunk could be run after you have optimized IPO parameters from last chunk to load the parameters as function. Here we use xcms 3 for peak picking and check [here](https://www.bioconductor.org/packages/release/bioc/html/xcms.html) for the technique details of their parameters.
 
 ```{r eval = FALSE}
 library(xcms)
@@ -199,7 +197,7 @@ getrtmz <- function(path,index = NULL){
                         minSamples = para$minsamp,
                         maxFeatures = para$max,
                         binSize = para$mzwid)
-
+  MSnbase::setMSnbaseFastLoad(FALSE)
   xdata <- findChromPeaks(raw_data, param = cwp)
   # xdata <- findChromPeaks(filter_data, param = cwp)
   xdata <- adjustRtime(xdata, param = owp)
@@ -253,7 +251,7 @@ getrtmzn <- function(path,index = NULL){
                         minSamples = paran$minsamp,
                         maxFeatures = paran$max,
                         binSize = paran$mzwid)
-
+  MSnbase::setMSnbaseFastLoad(FALSE)
   xdata <- findChromPeaks(raw_data, param = cwp)
   # xdata <- findChromPeaks(filter_data, param = cwp)
   xdata <- adjustRtime(xdata, param = owp)
@@ -308,7 +306,7 @@ sum(indexmean <- apply(gm,1,function(x) all(x[srm]> 3*x[blk])))
 # filter by pool qc rsd%, return numbers and index
 # select rsd% cutoff 30
 rsdcf <- 30
-sum(indexrsd <- apply(gr,1,function(x) ifelse(is.na(x[2]),T,x[2]<rsdcf)))
+sum(indexrsd <- apply(gr,1,function(x) ifelse(is.na(x[srm]),T,x[srm]<rsdcf)))
 # overlap with rsd% and mean filter
 sum(index <- indexmean&indexrsd)
 # 4711
@@ -340,11 +338,10 @@ sum(indexn <- indexmean&indexrsd)
 qcindex <- grepl('matrix',mzrt$group$sample_group)
 mzrtfiltern <- enviGCMS::getfilter(mzrt,rowindex = indexn)
 sum(index <- indexmean&indexrsd)
-# 3608
 enviGCMS::getcsv(mzrtfiltern,'rpn')
 ```
 
-## Precusor selection
+## Precursor selection
 
 This section will select the precursor ions from MS1 full scan data for MS2 spectra data collection.
 
@@ -1089,3 +1086,8 @@ points(concor$neg~concor[,5],col='red')
 points(anno2$parent.mass~anno2$RTMean,pch=19)
 # dev.off()
 ```
+
+```{r}
+sessionInfo()
+```
+
