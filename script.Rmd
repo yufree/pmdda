@@ -419,12 +419,13 @@ This chunk is the code to extract precursor ions list by pmd package and GlobalS
 # PMD
 pos <- enviGCMS::getmzrtcsv('rppmzrt.csv')
 neg <- enviGCMS::getmzrtcsv('rpnmzrt.csv')
-
+# perform GlobalStd algorithm
 pospmd <- pmd::globalstd(pos,sda=F,ng = NULL)
 # 849
 pospmd2 <- pmd::getcluster(pospmd,corcutoff = 0.9)
 sum(pospmd2$stdmassindex2)
 # 780
+# generate the targeted ions list
 pre <- cbind.data.frame(mz=pospmd2$mz[pospmd2$stdmassindex2],rt=pospmd2$rt[pospmd2$stdmassindex2])
 write.csv(pre,'pretar.csv')
 pre <- read.csv('pretar.csv')
