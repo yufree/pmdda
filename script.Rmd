@@ -152,7 +152,7 @@ library(xcms)
 # here we use pre-optimized IPO parameters
 # Or you could load your own set from last chunk
 # Positive mode
-load('para.RData')
+para <- readRDS('para.RDS')
 getrtmz <- function(path,index = NULL){
   files <- list.files(path,pattern = ".CDF|.mzXML|.mzML",full.names = T,recursive = T)
   if(!is.null(index)){
@@ -206,7 +206,7 @@ getrtmz <- function(path,index = NULL){
   return(xdata)
 }
 # Negative mode
-load('paran.RData')
+paran <- readRDS('paran.RDS')
 getrtmzn <- function(path,index = NULL){
   files <- list.files(path,pattern = ".CDF|.mzXML|.mzML",full.names = T,recursive = T)
   if(!is.null(index)){
