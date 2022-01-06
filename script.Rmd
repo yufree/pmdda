@@ -15,6 +15,12 @@ knitr::opts_chunk$set(echo = TRUE,cache = FALSE,message=TRUE,warning=FALSE)
 
 This document is the reproducible code for PMDDA paper with extra comparison with other workflow. To access standalone PMDDA workflow, please install `rmwf` package from [GitHub](https://github.com/yufree/rmwf) and use `rmarkdown::draft("test.Rmd", template = "PMDDA", package = "rmwf")` to create a reproducible workflow document for your own studies. Such workflow is also available through [xcmsrocker](https://hub.docker.com/r/yufree/xcmsrocker/) project.
 
+The core of PMDDA workflow include the following steps:
+
+- MS1 full scan peak-picking.
+- GlobalStd algorithm to select precursor ions for MS2 from MS1 data.
+- Collect the MS2 data and annotation with GNPS.
+
 # MS1 data collection
 
 The MS1 full scan data used in this study could be accessed from figshare and the details are given as comments in this chunk. Those data include five NIST1950 samples and five matrix samples from positive and negative mode, respectively. Those data are also available on GitHub.
