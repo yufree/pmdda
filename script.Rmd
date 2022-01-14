@@ -735,9 +735,7 @@ file2 <- cbind.data.frame(idx=c(1:length(file)),file)
 x <- merge(file2,df,by.x='idx',by.y='files')
 write.csv(x,'rppms1.csv')
 
-mzdatapath <- 'data/MS2/'
-file <- list.files(mzdatapath, 
-                          recursive = TRUE, full.names = TRUE)
+# get the negative MS2 data
 dda_data <- MSnbase::readMSData(file[!index], mode = "onDisk")
 cwp <- xcms::CentWaveParam(noise = 0, ppm = 10,
                      peakwidth = c(9.1, 90.5),mzdiff = -0.0197)
@@ -879,11 +877,14 @@ grid::grid.text("Negative",x = 0.15, y=0.95, gp=grid::gpar(fontsize=12))
 #dev.off()
 ```
 
-### GNPS identification comparison
+### GNPS compounds annotation comparison
 
-This chunk will generate figure S3 to compare the annotation results.
+This chunk will generate figure S3 to compare the compounds annotation results.
 
 ```{r}
+# import the MS1 full scan peak list
+rpp <- enviGCMS::getmzrtcsv('rppmzrt.csv')
+rpn <- enviGCMS::getmzrtcsv('rpnmzrt.csv')
 # import GNPS annotation results with compounds name and remove the duplicates for positive mode
 posanno <- read.csv('rppanno.csv')
 posanno2 <- posanno[!duplicated(posanno$Compound_Name)&(posanno$IonMode == 'positive'|posanno$IonMode == 'Positive'),]
